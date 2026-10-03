@@ -7,6 +7,6 @@
   "dependencies": {
     "@react-email/components": "^1.0.8",
     "@react-email/render": "^2.0.4",
-    "resend": "^6.9.0"
+    "resend": "^6.31.0"
   }
 }
