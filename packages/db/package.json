@@ -1,0 +1,13 @@
+{
+  "name": "@edu/db",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "generate": "drizzle-kit generate"
+  },
+  "dependencies": {
+    "drizzle-kit": "^0.31.8",
+    "@edu/shared": "workspace:*"
+  }
+}

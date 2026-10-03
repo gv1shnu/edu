@@ -1,0 +1,24 @@
+name: Backup restore signal
+
+# The worker restores locally on the VPS at 03:00 IST Sunday.
+# This runner sees only PASS/FAIL. It has no object-store or database credentials.
+on:
+  schedule:
+    - cron: "30 22 * * 6" # Sunday 04:00 IST
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  signal:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Read VPS restore signal
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd '${{ secrets.VPS_APP_DIR }}'
+            docker compose -f infra/docker-compose.yml --env-file .env exec -T worker node scripts/restore-drill-status.mjs 2>/dev/null

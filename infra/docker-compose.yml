@@ -1,0 +1,145 @@
+x-common: &common
+  restart: unless-stopped
+x-app-env: &app-env
+  NODE_ENV: production
+  E2E_AUTH_BYPASS: "0"
+  BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET}
+  # Runtime role: no superuser, no BYPASSRLS. Created by `pnpm db:migrate` (run in the worker container).
+  DATABASE_URL: postgresql://edu_app:${APP_DB_PASSWORD:?Set APP_DB_PASSWORD}@postgres:5432/edu
+  REDIS_URL: redis://redis:6379
+  BETTER_AUTH_URL: https://${APP_DOMAIN:-edu.vishnugandarapu.in}
+  NEXT_PUBLIC_APP_URL: https://${APP_DOMAIN:-edu.vishnugandarapu.in}
+  NEXT_PUBLIC_REALTIME_URL: https://${APP_DOMAIN:-edu.vishnugandarapu.in}
+services:
+  caddy:
+    <<: *common
+    image: caddy:2-alpine
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:-edu.vishnugandarapu.in}
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL}
+    ports: ["80:80", "443:443", "443:443/udp"]
+    volumes:
+      [
+        "./Caddyfile:/etc/caddy/Caddyfile:ro",
+        "caddy-data:/data",
+        "caddy-config:/config",
+      ]
+    networks: [front]
+    depends_on: [web, realtime]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:2019/config/"]
+      interval: 30s
+      retries: 3
+  web:
+    <<: *common
+    image: ${EDU_IMAGE_PREFIX:-edu}/web:${EDU_IMAGE_TAG:-latest}
+    build:
+      context: ..
+      target: web
+      args:
+        NEXT_PUBLIC_APP_URL: https://${APP_DOMAIN:-edu.vishnugandarapu.in}
+        NEXT_PUBLIC_REALTIME_URL: https://${APP_DOMAIN:-edu.vishnugandarapu.in}
+    environment:
+      <<: *app-env
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      ADMIN_EMAILS: ${ADMIN_EMAILS}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET}
+      R2_ENDPOINT: ${R2_ENDPOINT}
+      R2_BUCKET: ${R2_BUCKET}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
+    networks: [front, app]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      retries: 3
+  realtime:
+    <<: *common
+    image: ${EDU_IMAGE_PREFIX:-edu}/realtime:${EDU_IMAGE_TAG:-latest}
+    build: { context: .., target: service }
+    environment:
+      <<: *app-env
+
+    networks: [front, app]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      retries: 3
+  worker:
+    <<: *common
+    image: ${EDU_IMAGE_PREFIX:-edu}/worker:${EDU_IMAGE_TAG:-latest}
+    build: { context: .., target: worker }
+    environment:
+      <<: *app-env
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      EMAIL_FROM: ${EMAIL_FROM}
+      # Google Calendar events for scheduled classes (same OAuth client as sign-in).
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      R2_ENDPOINT: ${R2_ENDPOINT}
+      R2_BUCKET: ${R2_BUCKET}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
+      BACKUP_R2_BUCKET: ${BACKUP_R2_BUCKET}
+      # Owner credentials: only the worker holds them, for migrations and pg_dump backups.
+      MIGRATION_DATABASE_URL: postgresql://edu:${POSTGRES_PASSWORD}@postgres:5432/edu
+    networks: [app]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "node", "scripts/worker-health.mjs"]
+      interval: 30s
+      retries: 3
+  postgres:
+    restart: unless-stopped
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: edu
+      POSTGRES_USER: edu
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes: ["db:/var/lib/postgresql/data"]
+    networks: [app]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U edu -d edu"]
+      interval: 10s
+      retries: 10
+  redis:
+    restart: unless-stopped
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: ["redis:/data"]
+    networks: [app]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 5
+volumes:
+  db:
+  redis:
+  caddy-data:
+  caddy-config:
+networks:
+  front:
+  app:

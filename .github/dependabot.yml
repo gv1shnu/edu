@@ -1,0 +1,29 @@
+# Weekly dependency updates, opened against `main`. Patch and minor updates merge themselves
+# once CI is green (see workflows/dependabot-automerge.yml); major updates wait for review.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    target-branch: main
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Kolkata
+    open-pull-requests-limit: 10
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Pinned on purpose: 5.4.x breaks under Next.js 15's webpack build (wojtekmaj/react-pdf#1813).
+      - dependency-name: pdfjs-dist
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: main
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /
+    target-branch: main
+    schedule:
+      interval: weekly

@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@edu/db": ["packages/db/src/index.ts"],
+      "@edu/shared": ["packages/shared/src/index.ts"],
+      "@edu/email": ["packages/email/src/index.tsx"],
+      "@/*": ["apps/web/src/*"]
+    }
+  },
+  "include": [
+    "apps/**/*.ts",
+    "apps/**/*.tsx",
+    "packages/**/*.ts",
+    "packages/**/*.tsx",
+    "tests/**/*.ts",
+    "*.ts"
+  ],
+  "exclude": ["node_modules", "**/.next/**"]
+}

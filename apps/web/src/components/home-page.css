@@ -1,0 +1,51 @@
+.home {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  padding: 40px 24px;
+}
+.home-intro {
+  width: 100%;
+  max-width: 600px;
+  text-align: center;
+}
+.home-label {
+  color: var(--primary);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  margin-bottom: 20px;
+}
+.home h1 {
+  font-size: clamp(30px, 4vw, 48px);
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  line-height: 1.15;
+}
+.home-description {
+  margin-top: 20px;
+  font-size: 16px;
+  line-height: 1.7;
+}
+.home .home-link {
+  margin-top: 30px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+  gap: 16px;
+}
+@media (max-width: 550px) {
+  .home {
+    padding: 24px 20px;
+  }
+  .home-label {
+    margin-bottom: 16px;
+  }
+  .home-description {
+    font-size: 14px;
+    margin-top: 16px;
+  }
+  .home .home-link {
+    margin-top: 24px;
+  }
+}

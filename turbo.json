@@ -1,0 +1,19 @@
+{
+  "tasks": {
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "dist/**"],
+      "env": [
+        "DATABASE_URL",
+        "BETTER_AUTH_SECRET",
+        "BETTER_AUTH_URL",
+        "NEXT_PUBLIC_APP_URL",
+        "NEXT_PUBLIC_REALTIME_URL"
+      ]
+    }
+  }
+}

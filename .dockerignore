@@ -1,0 +1,17 @@
+node_modules
+**/node_modules
+**/.next
+**/dist
+.git
+.env
+**/.env.local
+.local
+.turbo
+test-results
+playwright-report
+*.tsbuildinfo
+
+# Development fixtures must not enter production images.
+tests
+**/*.dump
+**/*.backup

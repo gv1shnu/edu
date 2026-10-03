@@ -1,0 +1,19 @@
+{
+  "name": "@edu/worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file=../../.env src/index.ts",
+    "start": "tsx src/index.ts",
+    "build": "tsc --noEmit -p ../../tsconfig.json"
+  },
+  "dependencies": {
+    "@edu/db": "workspace:*",
+    "@edu/shared": "workspace:*",
+    "@edu/email": "workspace:*",
+    "@aws-sdk/client-s3": "^3.995.0",
+    "archiver": "^7.0.1",
+    "@types/archiver": "^7.0.0",
+    "resend": "^6.9.0"
+  }
+}

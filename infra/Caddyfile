@@ -1,0 +1,12 @@
+{
+ email {$ACME_EMAIL}
+}
+{$APP_DOMAIN:edu.vishnugandarapu.in} {
+ encode zstd gzip
+ handle /socket.io/* {
+  reverse_proxy realtime:3001
+ }
+ handle {
+  reverse_proxy web:3000
+ }
+}

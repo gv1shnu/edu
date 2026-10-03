@@ -1,0 +1,155 @@
+name: CI
+
+# Feature branches: every push is tested. main: every push is tested, built and deployed to
+# production automatically (main only changes by merging a green feature-branch pull request).
+on:
+  push:
+    branches: [main, "feature/**"]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+  # Throwaway CI-only values. Real secrets live in the VPS .env, never here.
+  POSTGRES_PASSWORD: ci-postgres
+  DATABASE_URL: postgresql://edu_app:ci-app@127.0.0.1:5432/edu
+  MIGRATION_DATABASE_URL: postgresql://edu:ci-postgres@127.0.0.1:5432/edu
+  APP_DB_PASSWORD: ci-app
+  REDIS_URL: redis://127.0.0.1:6379
+  BETTER_AUTH_SECRET: ci-only-secret-0123456789abcdef0123456789abcdef
+  BETTER_AUTH_URL: http://localhost:3000
+  NEXT_PUBLIC_APP_URL: http://localhost:3000
+  NEXT_PUBLIC_REALTIME_URL: http://localhost:3001
+  ADMIN_EMAILS: owner@example.com
+  EMAIL_FROM: "EDU <noreply@example.com>"
+  PAYMENTS_STUB: "1"
+  RAZORPAY_KEY_ID: rzp_test_stub
+  RAZORPAY_KEY_SECRET: ci-razorpay-key-secret
+  RAZORPAY_WEBHOOK_SECRET: ci-razorpay-webhook-secret
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    services:
+      # Integration tests use Redis for rate limits and the live-class service.
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: PostgreSQL client for local restore regression tests
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client-16
+      - name: Integration tests (Testcontainers, PostgreSQL 16)
+        run: pnpm test:integration
+        env:
+          USE_TESTCONTAINERS: "1"
+
+  e2e:
+    needs: checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Start PostgreSQL and Redis
+        run: docker compose -f infra/docker-compose.dev.yml up -d --wait postgres redis
+      - run: pnpm db:migrate
+      - name: Start web, realtime and worker
+        run: |
+          # Dev mode: the payments stub refuses to load under NODE_ENV=production. The images job builds production.
+          (cd apps/web && nohup pnpm dev > ../../web.log 2>&1 &)
+          (cd apps/realtime && nohup pnpm start > ../../realtime.log 2>&1 &)
+          (cd apps/worker && nohup pnpm start > ../../worker.log 2>&1 &)
+          for i in $(seq 1 120); do
+            curl -fsS http://localhost:3000/api/health && curl -fsS http://localhost:3001/health && exit 0
+            sleep 2
+          done
+          cat web.log realtime.log worker.log; exit 1
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Playwright
+        run: pnpm test:e2e
+        env:
+          # Only the test process creates DB sessions; the web server never enables a bypass.
+          NODE_ENV: test
+          E2E_AUTH_BYPASS: "1"
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            playwright-report
+            test-results
+            *.log
+
+  images:
+    needs: e2e
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build images
+        run: docker compose -f infra/docker-compose.yml build
+        env:
+          ACME_EMAIL: ci@example.com
+      - name: Push images
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          ACME_EMAIL: ci@example.com
+          EDU_IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}
+          EDU_IMAGE_TAG: ${{ github.sha }}
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker compose -f infra/docker-compose.yml build
+          docker compose -f infra/docker-compose.yml push web realtime worker
+
+  deploy:
+    needs: images
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: production-deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - name: Copy deploy files to the VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: infra/docker-compose.yml,infra/Caddyfile,infra/deploy.sh,infra/backup/restore.sh
+          target: ${{ secrets.VPS_APP_DIR }}
+      - name: Migrate, release, health-check (auto-rollback on failure)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            cd ${{ secrets.VPS_APP_DIR }}
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+            export EDU_IMAGE_PREFIX=ghcr.io/${{ github.repository_owner }}
+            sh infra/deploy.sh ${{ github.sha }}
