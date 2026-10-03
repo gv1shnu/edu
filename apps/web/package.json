@@ -30,7 +30,7 @@
     "qrcode": "^1.5.4",
     "react-hook-form": "^7.71.0",
     "react-markdown": "^10.1.0",
-    "react-pdf": "^10.3.0",
+    "react-pdf": "^11.0.0",
     "recharts": "^3.7.0",
     "rehype-katex": "^7.0.1",
     "rehype-sanitize": "^6.0.0",
