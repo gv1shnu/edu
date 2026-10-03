@@ -12,8 +12,8 @@
     "@edu/shared": "workspace:*",
     "@edu/email": "workspace:*",
     "@aws-sdk/client-s3": "^3.995.0",
-    "archiver": "^7.0.1",
-    "@types/archiver": "^7.0.0",
+    "archiver": "^8.0.0",
+    "@types/archiver": "^8.0.0",
     "resend": "^6.9.0"
   }
 }
