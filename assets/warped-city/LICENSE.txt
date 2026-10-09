@@ -1,0 +1,6 @@
+Warped City background layers (sky.png, far.png, near.png; originally bg-1/bg-2/bg-3.png)
+Artwork created by Luis Zuno @ansimuz
+Source: https://opengameart.org/content/warped-city
+
+License: CC0 / public domain. "Public domain and free to use on whatever you want,
+personal or commercial. Credit is not required but appreciated."

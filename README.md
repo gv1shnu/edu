@@ -21,7 +21,7 @@ Edit `config.json`:
 
 ## Look and feel
 
-The cyberpunk night-city background is drawn procedurally on a `<canvas>` in `assets/city.js`, with parallax skyline layers, neon signs, searchlights, flying cars and rain, so there are no image assets to license. It pauses when the tab is hidden and shows a single still frame when the visitor has reduced motion turned on.
+The cyberpunk night-city background in `assets/city.js` scrolls the three parallax layers from [Warped City](https://opengameart.org/content/warped-city) by Luis Zuno (@ansimuz), which is CC0 (see `assets/warped-city/LICENSE.txt`), and adds flying cars and rain. The canvas renders at the art's native resolution and is upscaled with pixelated edges. It pauses when the tab is hidden and shows a single still frame when the visitor has reduced motion turned on.
 
 ## Local preview
 
