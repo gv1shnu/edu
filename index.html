@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Projects · gv1shnu</title>
+  <meta name="description" content="A live gallery of every public GitHub repository by gv1shnu.">
+  <meta property="og:title" content="Projects · gv1shnu">
+  <meta property="og:description" content="A live gallery of every public GitHub repository by gv1shnu.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%235b5bd6'/><path d='M28 30h18v18H28zM54 30h18v18H54zM28 56h18v18H28zM54 56h18v18H54z' fill='white'/></svg>">
+  <link rel="stylesheet" href="assets/style.css">
+  <script src="assets/app.js" defer></script>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <h1 id="title">Projects</h1>
+      <p id="tagline" class="muted">Every public repository, updated automatically.</p>
+      <dl class="stats" id="stats" aria-live="polite"></dl>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <form class="controls" id="controls" onsubmit="return false">
+      <input type="search" id="q" placeholder="Search name, description, topic…" aria-label="Search repositories">
+      <select id="lang" aria-label="Filter by language"><option value="">All languages</option></select>
+      <select id="topic" aria-label="Filter by topic"><option value="">All topics</option></select>
+      <select id="sort" aria-label="Sort by">
+        <option value="pushed">Recently updated</option>
+        <option value="stars">Most stars</option>
+        <option value="created">Newest</option>
+        <option value="name">Name</option>
+      </select>
+      <label class="check"><input type="checkbox" id="showForks"> Forks</label>
+      <label class="check"><input type="checkbox" id="showArchived"> Archived</label>
+    </form>
+
+    <p class="status muted" id="status" aria-live="polite">Loading…</p>
+    <ul class="grid" id="grid"></ul>
+  </main>
+
+  <footer class="wrap muted">
+    <span id="freshness"></span>
+    · <a id="profile" href="https://github.com/gv1shnu">GitHub profile</a>
+  </footer>
+</body>
+</html>
