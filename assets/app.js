@@ -52,8 +52,9 @@ async function loadLive() {
       repos.push(...batch);
       if (batch.length < 100) break;
     }
-    const known = new Set(state.repos.map((r) => r.name));
-    const live = repos.map((r) => fromApi(r, user));
+    // Releases only come from the snapshot (one API call per repo is too costly for visitors).
+    const known = new Map(state.repos.map((r) => [r.name, r]));
+    const live = repos.map((r) => ({ ...fromApi(r, user), release: known.get(r.name)?.release ?? null }));
     if (known.size) state.newNames = new Set(live.filter((r) => !known.has(r.name)).map((r) => r.name));
     state.repos = live;
     state.updatedAt = new Date();
@@ -121,6 +122,7 @@ function card(r) {
     pinned && el("span", { className: "badge pin", textContent: "Pinned" }),
     r.fork && el("span", { className: "badge", textContent: "Fork" }),
     r.archived && el("span", { className: "badge", textContent: "Archived" }),
+    state.newNames.has(r.name) && el("span", { className: "badge new", textContent: "New" }),
   );
   const desc = el("p", {
     className: r.description ? "desc" : "desc empty",
@@ -140,13 +142,16 @@ function card(r) {
     lang,
     r.stars > 0 && el("span", { title: "Stars", textContent: `★ ${r.stars}` }),
     r.forks > 0 && el("span", { title: "Forks", textContent: `⑂ ${r.forks}` }),
-    el("span", { title: new Date(r.pushedAt).toLocaleString(), textContent: relativeTime(r.pushedAt) }),
-    el("span", { className: "links" },
-      r.homepage && el("a", { href: r.homepage, textContent: "Live ↗" }),
-      el("a", { href: r.url, textContent: "Code" }),
-    ),
+    el("span", { title: new Date(r.pushedAt).toLocaleString(), textContent: `upd ${relativeTime(r.pushedAt)}` }),
   );
-  return el("li", { className: state.newNames.has(r.name) ? "card new" : "card" }, head, desc, topics, meta);
+  const links = el("div", { className: "links" },
+    r.homepage && el("a", { className: "live", href: r.homepage, textContent: "Live ↗" }),
+    r.release && el("a", { className: "release", href: r.release.url, title: r.release.name || r.release.tag },
+      "Release\u00a0", el("span", { className: "tag", textContent: r.release.tag }), "\u00a0↓",
+    ),
+    el("a", { href: r.url, textContent: "Code" }),
+  );
+  return el("li", { className: state.newNames.has(r.name) ? "card new" : "card" }, head, desc, topics, meta, links);
 }
 
 function renderStats() {
@@ -156,6 +161,7 @@ function renderStats() {
     ["Stars", own.reduce((n, r) => n + r.stars, 0)],
     ["Languages", new Set(own.map((r) => r.language).filter(Boolean)).size],
     ["Live demos", own.filter((r) => r.homepage).length],
+    ["Releases", own.filter((r) => r.release).length],
   ];
   $("stats").replaceChildren(...stats.filter(([, v]) => v > 0).map(([k, v]) => el("div", {}, el("dt", { textContent: k }), el("dd", { textContent: v }))));
 }
@@ -171,7 +177,7 @@ function render() {
 
   $("status").textContent =
     state.source === "error" ? "Couldn't reach GitHub right now. Please try again in a minute." :
-    !state.repos.length ? "Loading…" :
+    !state.repos.length ? "Jacking in…" :
     `Showing ${repos.length} of ${all.length} repositories`;
   if (state.updatedAt) {
     $("freshness").textContent = `${state.source === "live" ? "Live from GitHub" : "Snapshot"} · updated ${state.updatedAt.toLocaleString()}`;
@@ -181,9 +187,13 @@ function render() {
 async function init() {
   state.config = await getJson("config.json");
   const { user, title, tagline } = state.config;
-  if (title) $("title").textContent = title;
+  if (title) Object.assign($("title"), { textContent: title }).dataset.text = title;
   if (tagline) $("tagline").textContent = tagline;
   $("profile").href = `https://github.com/${user}`;
+  if (state.config.home) for (const a of document.querySelectorAll("#home, footer a[href='https://vishnugandarapu.in']")) a.href = state.config.home;
+  const tick = () => ($("clock").textContent = new Date().toLocaleTimeString([], { hour12: false }));
+  tick();
+  setInterval(tick, 1000);
   $("controls").addEventListener("input", render);
 
   await loadSnapshot();

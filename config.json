@@ -1,7 +1,11 @@
 {
   "user": "gv1shnu",
-  "title": "Projects",
+  "title": "PROJECTS",
   "tagline": "Every public repository, updated automatically.",
-  "hidden": ["gv1shnu", "projects"],
+  "home": "https://vishnugandarapu.in",
+  "hidden": [
+    "gv1shnu",
+    "projects"
+  ],
   "pinned": []
 }

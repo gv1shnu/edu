@@ -38,7 +38,21 @@ const pick = (r) => ({
   pushedAt: r.pushed_at,
 });
 
+// Latest published release (drafts and prereleases are excluded by this endpoint); null when none.
+async function fetchLatestRelease(repo) {
+  const res = await fetch(`https://api.github.com/repos/${config.user}/${repo}/releases/latest`, { headers });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`GitHub API ${res.status} for ${repo} releases`);
+  const r = await res.json();
+  return { tag: r.tag_name, name: r.name, url: r.html_url, publishedAt: r.published_at, assets: r.assets.length };
+}
+
 const repos = (await fetchAllRepos(config.user)).filter((r) => !r.private).map(pick);
+for (let i = 0; i < repos.length; i += 10) {
+  const chunk = repos.slice(i, i + 10);
+  const releases = await Promise.all(chunk.map((r) => fetchLatestRelease(r.name)));
+  chunk.forEach((r, j) => (r.release = releases[j]));
+}
 const data = { user: config.user, generatedAt: new Date().toISOString(), repos };
 
 await mkdir(join(outDir, "data"), { recursive: true });

@@ -5,6 +5,7 @@ A live gallery of every public repository on [github.com/gv1shnu](https://github
 ## How it stays current
 
 - **Snapshot:** `.github/workflows/deploy.yml` runs on every push, every 6 hours and on demand. It calls `scripts/build-data.mjs` to write `data/repos.json`, then deploys the site.
+- **Releases:** the snapshot also stores each repo's latest release, so repos that ship downloads instead of a live URL get a release link.
 - **Live refresh:** in the browser, `assets/app.js` shows the snapshot straight away, then fetches the GitHub API and merges in anything newer. If the API's rate limit is hit, the snapshot stays on screen.
 
 ## Curation
@@ -16,6 +17,11 @@ Edit `config.json`:
 | `hidden` | Repo names to leave out of the gallery |
 | `pinned` | Repo names shown first, in this order |
 | `title`, `tagline` | Header text |
+| `home` | Where the "back" link points (the personal site) |
+
+## Look and feel
+
+The cyberpunk night-city background is drawn procedurally on a `<canvas>` in `assets/city.js`, with parallax skyline layers, neon signs, searchlights, flying cars and rain, so there are no image assets to license. It pauses when the tab is hidden and shows a single still frame when the visitor has reduced motion turned on.
 
 ## Local preview
 
